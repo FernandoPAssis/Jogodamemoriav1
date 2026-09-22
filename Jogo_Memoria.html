@@ -2,10 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-
     <title>Jogo da Memória</title>
     <style>
         body {
@@ -43,18 +40,39 @@
         .timer {
             font-size: 24px;
             font-weight: bold;
-            cursor: pointer;
+            margin-bottom: 15px;
         }
+
+        /* Estilo do novo botão de reiniciar */
+        .restart-btn {
+            display: none; /* Escondido por padrão */
+            padding: 10px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background-color: #28a745; /* Verde */
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: background-color 0.2s ease;
+        }
+
+            .restart-btn:hover {
+                background-color: #218838;
+            }
     </style>
 </head>
 <body>
 
     <div class="grid" id="grid"></div>
-    <div class="timer" id="timer" onclick="reiniciarSeVenceu()">0.0s</div>
+    <div class="timer" id="timer">0.0s</div>
+
+    <!-- Botão de reiniciar -->
+    <button class="restart-btn" id="restartBtn" onclick="setupGame()">Jogar Novamente 🔄</button>
 
     <script>
         const emojisBase = ["🐶", "🐱", "🐭", "🐻", "🐼", "🐨", "🐸", "🐮", "🦁", "🐟"];
-        let cards = [];
         let firstCard = null;
         let lockBoard = false;
         let matchesFound = 0;
@@ -63,15 +81,19 @@
 
         function setupGame() {
             const grid = document.getElementById('grid');
+            const restartBtn = document.getElementById('restartBtn');
             grid.innerHTML = '';
-            
+
+            // Esconde o botão ao reiniciar o jogo
+            restartBtn.style.display = 'none';
+
             // Duplica os emojis para formar os pares e embaralha
             let deck = [...emojisBase, ...emojisBase].sort(() => Math.random() - 0.5);
-            
+
             matchesFound = 0;
             firstCard = null;
             lockBoard = false;
-            
+
             deck.forEach((emoji) => {
                 const card = document.createElement('div');
                 card.classList.add('card');
@@ -94,7 +116,6 @@
         function flipCard() {
             if (lockBoard || this === firstCard || this.textContent !== '❓') return;
 
-            // Revela o emoji escondido no data attribute
             this.textContent = this.dataset.emoji;
 
             if (!firstCard) {
@@ -102,18 +123,17 @@
                 return;
             }
 
-            // Segundo clique
             if (firstCard.dataset.emoji === this.dataset.emoji) {
-                // Par correto
                 matchesFound++;
                 firstCard = null;
 
+                // Quando conclui o jogo
                 if (matchesFound === 10) {
                     clearInterval(timerInterval);
-                    document.getElementById('timer').textContent += " - Jogar novamente?";
+                    // Exibe o botão de reiniciar
+                    document.getElementById('restartBtn').style.display = 'block';
                 }
             } else {
-                // Errou: esconde as duas cartas após um breve intervalo
                 lockBoard = true;
                 setTimeout(() => {
                     firstCard.textContent = '❓';
@@ -121,12 +141,6 @@
                     firstCard = null;
                     lockBoard = false;
                 }, 800);
-            }
-        }
-
-        function reiniciarSeVenceu() {
-            if (matchesFound === 10) {
-                setupGame();
             }
         }
 
