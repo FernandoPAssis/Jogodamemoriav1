@@ -16,6 +16,33 @@
             background-color: #f4f4f9;
         }
 
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .sound-btn {
+            background: none;
+            border: 2px solid #007bff;
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+            .sound-btn:hover {
+                background-color: #007bff;
+                transform: scale(1.05);
+            }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(4, 70px);
@@ -41,10 +68,8 @@
         .timer {
             font-size: 24px;
             font-weight: bold;
-            margin-bottom: 15px;
         }
 
-        /* Estilo dos Botões */
         .btn {
             padding: 12px 24px;
             font-size: 18px;
@@ -57,6 +82,7 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             transition: all 0.2s ease-in-out;
             outline: none;
+            margin-top: 15px;
         }
 
             .btn:hover {
@@ -69,35 +95,21 @@
                 transform: translateY(1px);
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
             }
-
-        .start-screen {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .game-screen {
-            display: none;
-            flex-direction: column;
-            align-items: center;
-        }
     </style>
 </head>
 <body>
 
-    <!-- Tela Inicial (para desbloquear o áudio) -->
-    <div class="start-screen" id="startScreen">
-        <h1>Jogo da Memória 🧠</h1>
-        <button class="btn" onclick="startGame()">Iniciar Jogo 🎮</button>
+    <!-- Controlo Superior: Cronómetro e Botão de Áudio -->
+    <div class="header-controls">
+        <div class="timer" id="timer">0.0s</div>
+        <button class="sound-btn" id="soundBtn" onclick="toggleSound()" title="Ativar/Desativar Som">🔊</button>
     </div>
 
-    <!-- Tela do Jogo -->
-    <div class="game-screen" id="gameScreen">
-        <div class="grid" id="grid"></div>
-        <div class="timer" id="timer">0.0s</div>
-        <button class="btn" id="restartBtn" style="display: none;" onclick="setupGame()">Jogar Novamente 🔄</button>
-    </div>
+    <!-- Tabuleiro do Jogo -->
+    <div class="grid" id="grid"></div>
+
+    <!-- Botão de Reiniciar -->
+    <button class="btn" id="restartBtn" style="display: none;" onclick="setupGame()">Jogar Novamente 🔄</button>
 
     <script>
         const emojisBase = ["🐶", "🐱", "🐭", "🐻", "🐼", "🐨", "🐸", "🐮", "🦁", "🐟"];
@@ -106,9 +118,10 @@
         let matchesFound = 0;
         let tenthsElapsed = 0;
         let timerInterval = null;
-        let audioCtx = null;
 
-        // Ativa o áudio no primeiro clique do usuário
+        let audioCtx = null;
+        let soundEnabled = true;
+
         function initAudio() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -118,8 +131,15 @@
             }
         }
 
+        function toggleSound() {
+            initAudio();
+            soundEnabled = !soundEnabled;
+            const soundBtn = document.getElementById('soundBtn');
+            soundBtn.textContent = soundEnabled ? '🔊' : '🔇';
+        }
+
         function playClickSound() {
-            if (!audioCtx) return;
+            if (!soundEnabled || !audioCtx) return;
             try {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
@@ -139,9 +159,9 @@
         }
 
         function playMatchSound() {
-            if (!audioCtx) return;
+            if (!soundEnabled || !audioCtx) return;
             try {
-                // Nota 1 (C5)
+                // Nota 1
                 const osc1 = audioCtx.createOscillator();
                 const gain1 = audioCtx.createGain();
                 osc1.type = 'triangle';
@@ -153,7 +173,7 @@
                 osc1.start();
                 osc1.stop(audioCtx.currentTime + 0.15);
 
-                // Nota 2 (E5)
+                // Nota 2
                 setTimeout(() => {
                     const osc2 = audioCtx.createOscillator();
                     const gain2 = audioCtx.createGain();
@@ -167,13 +187,6 @@
                     osc2.stop(audioCtx.currentTime + 0.25);
                 }, 100);
             } catch (e) { }
-        }
-
-        function startGame() {
-            initAudio(); // Libera o som no navegador
-            document.getElementById('startScreen').style.display = 'none';
-            document.getElementById('gameScreen').style.display = 'flex';
-            setupGame();
         }
 
         function setupGame() {
@@ -209,6 +222,7 @@
         function flipCard() {
             if (lockBoard || this === firstCard || this.textContent !== '❓') return;
 
+            initAudio(); // Ativa o áudio no primeiro clique na carta
             playClickSound();
             this.textContent = this.dataset.emoji;
 
@@ -236,6 +250,8 @@
                 }, 800);
             }
         }
+
+        setupGame();
     </script>
 </body>
 </html>
