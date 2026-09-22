@@ -70,7 +70,6 @@
             font-weight: bold;
         }
 
-        /* Estilo dos Botões Principais */
         .btn {
             padding: 12px 24px;
             font-size: 18px;
@@ -120,7 +119,7 @@
 </head>
 <body>
 
-    <!-- Tela Inicial -->
+    <!-- Tela Inicial (Exibida assim que a página carrega) -->
     <div class="start-screen" id="startScreen">
         <h1>Jogo da Memória 🧠</h1>
         <button class="btn" onclick="startGame()">Iniciar Jogo 🎮</button>
@@ -188,7 +187,6 @@
         function playMatchSound() {
             if (!soundEnabled || !audioCtx) return;
             try {
-                // Nota 1
                 const osc1 = audioCtx.createOscillator();
                 const gain1 = audioCtx.createGain();
                 osc1.type = 'triangle';
@@ -200,7 +198,6 @@
                 osc1.start();
                 osc1.stop(audioCtx.currentTime + 0.15);
 
-                // Nota 2
                 setTimeout(() => {
                     const osc2 = audioCtx.createOscillator();
                     const gain2 = audioCtx.createGain();
@@ -216,8 +213,33 @@
             } catch (e) { }
         }
 
+        // Som festivo de vitória (Arpégio alegre de 4 notas)
+        function playVictorySound() {
+            if (!soundEnabled || !audioCtx) return;
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+            notes.forEach((freq, index) => {
+                setTimeout(() => {
+                    try {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+
+                        osc.start();
+                        osc.stop(audioCtx.currentTime + 0.3);
+                    } catch (e) { }
+                }, index * 120);
+            });
+        }
+
         function startGame() {
-            initAudio(); // Ativa permissão de som no navegador
+            initAudio();
             document.getElementById('startScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'flex';
             setupGame();
@@ -244,7 +266,6 @@
                 grid.appendChild(card);
             });
 
-            // Dispara o cronômetro exatamente ao iniciar/reiniciar
             clearInterval(timerInterval);
             tenthsElapsed = 0;
             document.getElementById('timer').textContent = "0.0s";
@@ -266,13 +287,15 @@
             }
 
             if (firstCard.dataset.emoji === this.dataset.emoji) {
-                playMatchSound();
                 matchesFound++;
                 firstCard = null;
 
                 if (matchesFound === 10) {
                     clearInterval(timerInterval);
+                    playVictorySound();
                     document.getElementById('restartBtn').style.display = 'block';
+                } else {
+                    playMatchSound();
                 }
             } else {
                 lockBoard = true;
