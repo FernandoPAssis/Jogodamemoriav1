@@ -35,6 +35,7 @@
             border-radius: 8px;
             cursor: pointer;
             user-select: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
 
         .timer {
@@ -43,23 +44,31 @@
             margin-bottom: 15px;
         }
 
-        /* Estilo do novo botão de reiniciar */
         .restart-btn {
-            display: none; /* Escondido por padrão */
-            padding: 10px 20px;
+            display: none;
+            margin-top: 15px;
+            padding: 12px 24px;
             font-size: 18px;
             font-weight: bold;
-            color: white;
-            background-color: #28a745; /* Verde */
+            color: #ffffff;
+            background-color: #28a745;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: background-color 0.2s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease-in-out;
+            outline: none;
         }
 
             .restart-btn:hover {
                 background-color: #218838;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+            }
+
+            .restart-btn:active {
+                transform: translateY(1px);
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
             }
     </style>
 </head>
@@ -68,7 +77,6 @@
     <div class="grid" id="grid"></div>
     <div class="timer" id="timer">0.0s</div>
 
-    <!-- Botão de reiniciar -->
     <button class="restart-btn" id="restartBtn" onclick="setupGame()">Jogar Novamente 🔄</button>
 
     <script>
@@ -79,15 +87,82 @@
         let tenthsElapsed = 0;
         let timerInterval = null;
 
+        // Contexto de Áudio do Navegador
+        let audioCtx = null;
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        // Som para o clique na carta (bip simples)
+        function playClickSound() {
+            try {
+                const ctx = getAudioContext();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, ctx.currentTime);
+
+                gain.gain.setValueAtTime(0.1, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.start();
+                osc.stop(ctx.currentTime + 0.08);
+            } catch (e) {
+                // Navegadores que bloqueiam áudio sem interação prévia ignoram silenciosamente
+            }
+        }
+
+        // Som para o acerto do par (efeito positivo de 2 notas)
+        function playMatchSound() {
+            try {
+                const ctx = getAudioContext();
+
+                // Primeira nota
+                const osc1 = ctx.createOscillator();
+                const gain1 = ctx.createGain();
+                osc1.type = 'triangle';
+                osc1.frequency.setValueAtTime(523.25, ctx.currentTime); // Nota C5
+                gain1.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                osc1.connect(gain1);
+                gain1.connect(ctx.destination);
+                osc1.start();
+                osc1.stop(ctx.currentTime + 0.15);
+
+                // Segunda nota (mais aguda)
+                setTimeout(() => {
+                    const osc2 = ctx.createOscillator();
+                    const gain2 = ctx.createGain();
+                    osc2.type = 'triangle';
+                    osc2.frequency.setValueAtTime(659.25, ctx.currentTime); // Nota E5
+                    gain2.gain.setValueAtTime(0.15, ctx.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+                    osc2.connect(gain2);
+                    gain2.connect(ctx.destination);
+                    osc2.start();
+                    osc2.stop(ctx.currentTime + 0.25);
+                }, 100);
+            } catch (e) { }
+        }
+
         function setupGame() {
             const grid = document.getElementById('grid');
             const restartBtn = document.getElementById('restartBtn');
             grid.innerHTML = '';
 
-            // Esconde o botão ao reiniciar o jogo
             restartBtn.style.display = 'none';
 
-            // Duplica os emojis para formar os pares e embaralha
             let deck = [...emojisBase, ...emojisBase].sort(() => Math.random() - 0.5);
 
             matchesFound = 0;
@@ -103,7 +178,6 @@
                 grid.appendChild(card);
             });
 
-            // Reinicia o cronômetro
             clearInterval(timerInterval);
             tenthsElapsed = 0;
             document.getElementById('timer').textContent = "0.0s";
@@ -116,6 +190,9 @@
         function flipCard() {
             if (lockBoard || this === firstCard || this.textContent !== '❓') return;
 
+            // Toca o som de clique
+            playClickSound();
+
             this.textContent = this.dataset.emoji;
 
             if (!firstCard) {
@@ -124,13 +201,14 @@
             }
 
             if (firstCard.dataset.emoji === this.dataset.emoji) {
+                // Toca o som de acerto do par
+                playMatchSound();
+
                 matchesFound++;
                 firstCard = null;
 
-                // Quando conclui o jogo
                 if (matchesFound === 10) {
                     clearInterval(timerInterval);
-                    // Exibe o botão de reiniciar
                     document.getElementById('restartBtn').style.display = 'block';
                 }
             } else {
