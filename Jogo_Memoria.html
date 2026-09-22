@@ -44,9 +44,8 @@
             margin-bottom: 15px;
         }
 
-        .restart-btn {
-            display: none;
-            margin-top: 15px;
+        /* Estilo dos Botões */
+        .btn {
             padding: 12px 24px;
             font-size: 18px;
             font-weight: bold;
@@ -60,24 +59,45 @@
             outline: none;
         }
 
-            .restart-btn:hover {
+            .btn:hover {
                 background-color: #218838;
                 transform: translateY(-2px);
                 box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
             }
 
-            .restart-btn:active {
+            .btn:active {
                 transform: translateY(1px);
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
             }
+
+        .start-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .game-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+        }
     </style>
 </head>
 <body>
 
-    <div class="grid" id="grid"></div>
-    <div class="timer" id="timer">0.0s</div>
+    <!-- Tela Inicial (para desbloquear o áudio) -->
+    <div class="start-screen" id="startScreen">
+        <h1>Jogo da Memória 🧠</h1>
+        <button class="btn" onclick="startGame()">Iniciar Jogo 🎮</button>
+    </div>
 
-    <button class="restart-btn" id="restartBtn" onclick="setupGame()">Jogar Novamente 🔄</button>
+    <!-- Tela do Jogo -->
+    <div class="game-screen" id="gameScreen">
+        <div class="grid" id="grid"></div>
+        <div class="timer" id="timer">0.0s</div>
+        <button class="btn" id="restartBtn" style="display: none;" onclick="setupGame()">Jogar Novamente 🔄</button>
+    </div>
 
     <script>
         const emojisBase = ["🐶", "🐱", "🐭", "🐻", "🐼", "🐨", "🐸", "🐮", "🦁", "🐟"];
@@ -86,81 +106,80 @@
         let matchesFound = 0;
         let tenthsElapsed = 0;
         let timerInterval = null;
-
-        // Contexto de Áudio do Navegador
         let audioCtx = null;
 
-        function getAudioContext() {
+        // Ativa o áudio no primeiro clique do usuário
+        function initAudio() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
             if (audioCtx.state === 'suspended') {
                 audioCtx.resume();
             }
-            return audioCtx;
         }
 
-        // Som para o clique na carta (bip simples)
         function playClickSound() {
+            if (!audioCtx) return;
             try {
-                const ctx = getAudioContext();
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
 
                 osc.type = 'sine';
-                osc.frequency.setValueAtTime(400, ctx.currentTime);
+                osc.frequency.setValueAtTime(450, audioCtx.currentTime);
 
-                gain.gain.setValueAtTime(0.1, ctx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
 
                 osc.connect(gain);
-                gain.connect(ctx.destination);
+                gain.connect(audioCtx.destination);
 
                 osc.start();
-                osc.stop(ctx.currentTime + 0.08);
-            } catch (e) {
-                // Navegadores que bloqueiam áudio sem interação prévia ignoram silenciosamente
-            }
+                osc.stop(audioCtx.currentTime + 0.08);
+            } catch (e) { }
         }
 
-        // Som para o acerto do par (efeito positivo de 2 notas)
         function playMatchSound() {
+            if (!audioCtx) return;
             try {
-                const ctx = getAudioContext();
-
-                // Primeira nota
-                const osc1 = ctx.createOscillator();
-                const gain1 = ctx.createGain();
+                // Nota 1 (C5)
+                const osc1 = audioCtx.createOscillator();
+                const gain1 = audioCtx.createGain();
                 osc1.type = 'triangle';
-                osc1.frequency.setValueAtTime(523.25, ctx.currentTime); // Nota C5
-                gain1.gain.setValueAtTime(0.15, ctx.currentTime);
-                gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+                osc1.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+                gain1.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
                 osc1.connect(gain1);
-                gain1.connect(ctx.destination);
+                gain1.connect(audioCtx.destination);
                 osc1.start();
-                osc1.stop(ctx.currentTime + 0.15);
+                osc1.stop(audioCtx.currentTime + 0.15);
 
-                // Segunda nota (mais aguda)
+                // Nota 2 (E5)
                 setTimeout(() => {
-                    const osc2 = ctx.createOscillator();
-                    const gain2 = ctx.createGain();
+                    const osc2 = audioCtx.createOscillator();
+                    const gain2 = audioCtx.createGain();
                     osc2.type = 'triangle';
-                    osc2.frequency.setValueAtTime(659.25, ctx.currentTime); // Nota E5
-                    gain2.gain.setValueAtTime(0.15, ctx.currentTime);
-                    gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+                    osc2.frequency.setValueAtTime(659.25, audioCtx.currentTime);
+                    gain2.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
                     osc2.connect(gain2);
-                    gain2.connect(ctx.destination);
+                    gain2.connect(audioCtx.destination);
                     osc2.start();
-                    osc2.stop(ctx.currentTime + 0.25);
+                    osc2.stop(audioCtx.currentTime + 0.25);
                 }, 100);
             } catch (e) { }
+        }
+
+        function startGame() {
+            initAudio(); // Libera o som no navegador
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'flex';
+            setupGame();
         }
 
         function setupGame() {
             const grid = document.getElementById('grid');
             const restartBtn = document.getElementById('restartBtn');
             grid.innerHTML = '';
-
             restartBtn.style.display = 'none';
 
             let deck = [...emojisBase, ...emojisBase].sort(() => Math.random() - 0.5);
@@ -190,9 +209,7 @@
         function flipCard() {
             if (lockBoard || this === firstCard || this.textContent !== '❓') return;
 
-            // Toca o som de clique
             playClickSound();
-
             this.textContent = this.dataset.emoji;
 
             if (!firstCard) {
@@ -201,9 +218,7 @@
             }
 
             if (firstCard.dataset.emoji === this.dataset.emoji) {
-                // Toca o som de acerto do par
                 playMatchSound();
-
                 matchesFound++;
                 firstCard = null;
 
@@ -221,8 +236,6 @@
                 }, 800);
             }
         }
-
-        setupGame();
     </script>
 </body>
 </html>
